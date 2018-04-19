@@ -62,11 +62,99 @@ make python2.7 python-pip sendmail supervisor ufw unattended-upgrades unzip whoi
 
 pip install httpie
 
+# Disable Password Authentication Over SSH
+
+sed -i "/PasswordAuthentication yes/d" /etc/ssh/sshd_config
+echo "" | sudo tee -a /etc/ssh/sshd_config
+echo "" | sudo tee -a /etc/ssh/sshd_config
+echo "PasswordAuthentication no" | sudo tee -a /etc/ssh/sshd_config
+
+# Restart SSH
+
+ssh-keygen -A
+service ssh restart
+
+# Set The Hostname If Necessary
+
+
+echo "snowy-sunrise" > /etc/hostname
+sed -i 's/127\.0\.0\.1.*localhost/127.0.0.1	snowy-sunrise localhost/' /etc/hosts
+hostname snowy-sunrise
+
+
 # Set The Timezone
 
 # ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 ln -sf /usr/share/zoneinfo/UTC /etc/localtime
 
+# Create The Root SSH Directory If Necessary
+
+if [ ! -d /root/.ssh ]
+then
+	mkdir -p /root/.ssh
+	touch /root/.ssh/authorized_keys
+fi
+
+# Setup Forge User
+
+useradd forge
+mkdir -p /home/forge/.ssh
+mkdir -p /home/forge/.forge
+adduser forge sudo
+
+# Setup Bash For Forge User
+
+chsh -s /bin/bash forge
+cp /root/.profile /home/forge/.profile
+cp /root/.bashrc /home/forge/.bashrc
+
+# Set The Sudo Password For Forge
+
+PASSWORD=$(mkpasswd abcpass)
+usermod --password $PASSWORD forge
+
+# Build Formatted Keys & Copy Keys To Forge
+
+
+cat > /root/.ssh/authorized_keys << EOF
+# Laravel Forge
+ssh-rsa abc12345 worker@forge.laravel.com
+EOF
+
+
+cp /root/.ssh/authorized_keys /home/forge/.ssh/authorized_keys
+
+# Create The Server SSH Key
+
+ssh-keygen -f /home/forge/.ssh/id_rsa -t rsa -N ''
+
+# Copy Source Control Public Keys Into Known Hosts File
+
+ssh-keyscan -H github.com >> /home/forge/.ssh/known_hosts
+ssh-keyscan -H bitbucket.org >> /home/forge/.ssh/known_hosts
+ssh-keyscan -H gitlab.com >> /home/forge/.ssh/known_hosts
+
+# Configure Git Settings
+
+git config --global user.name "John Doe"
+git config --global user.email "johne.doe@domain.tld"
+
+# Add The Reconnect Script Into Forge Directory
+
+cat > /home/forge/.forge/reconnect << EOF
+#!/usr/bin/env bash
+echo "# Laravel Forge" | tee -a /home/forge/.ssh/authorized_keys > /dev/null
+echo \$1 | tee -a /home/forge/.ssh/authorized_keys > /dev/null
+echo "# Laravel Forge" | tee -a /root/.ssh/authorized_keys > /dev/null
+echo \$1 | tee -a /root/.ssh/authorized_keys > /dev/null
+echo "Keys Added!"
+EOF
+
+# Setup Forge Home Directory Permissions
+
+chown -R forge:forge /home/forge
+chmod -R 755 /home/forge
+chmod 700 /home/forge/.ssh/id_rsa
 
 # Setup UFW Firewall
 
@@ -75,13 +163,22 @@ ufw allow 80
 ufw allow 443
 ufw --force enable
 
-# Install Base PHP Packages
-apt-get install -y --force-yes php7.2-cli php7.2-dev \
-php7.2-pgsql php7.2-sqlite3 php7.2-gd \
-php7.2-curl php7.2-memcached \
-php7.2-imap php7.2-mysql php7.2-mbstring \
-php7.2-xml php7.2-zip php7.2-bcmath php7.2-soap \
-php7.2-intl php7.2-readline php7.2-mcrypt
+# Allow FPM Restart
+
+echo "forge ALL=NOPASSWD: /usr/sbin/service php7.1-fpm reload" > /etc/sudoers.d/php-fpm
+echo "forge ALL=NOPASSWD: /usr/sbin/service php7.0-fpm reload" >> /etc/sudoers.d/php-fpm
+echo "forge ALL=NOPASSWD: /usr/sbin/service php5.6-fpm reload" >> /etc/sudoers.d/php-fpm
+echo "forge ALL=NOPASSWD: /usr/sbin/service php5-fpm reload" >> /etc/sudoers.d/php-fpm
+
+	# Install Base PHP Packages
+
+
+apt-get install -y --force-yes php7.1-cli php7.1-dev \
+php7.1-pgsql php7.1-sqlite3 php7.1-gd \
+php7.1-curl php7.1-memcached \
+php7.1-imap php7.1-mysql php7.1-mbstring \
+php7.1-xml php7.1-zip php7.1-bcmath php7.1-soap \
+php7.1-intl php7.1-readline php7.1-mcrypt
 
 
 # Install Composer Package Manager
@@ -91,10 +188,10 @@ mv composer.phar /usr/local/bin/composer
 
 # Misc. PHP CLI Configuration
 
-sudo sed -i "s/error_reporting = .*/error_reporting = E_ALL/" /etc/php/7.2/cli/php.ini
-sudo sed -i "s/display_errors = .*/display_errors = On/" /etc/php/7.2/cli/php.ini
-sudo sed -i "s/memory_limit = .*/memory_limit = 512M/" /etc/php/7.2/cli/php.ini
-sudo sed -i "s/;date.timezone.*/date.timezone = UTC/" /etc/php/7.2/cli/php.ini
+sudo sed -i "s/error_reporting = .*/error_reporting = E_ALL/" /etc/php/7.1/cli/php.ini
+sudo sed -i "s/display_errors = .*/display_errors = On/" /etc/php/7.1/cli/php.ini
+sudo sed -i "s/memory_limit = .*/memory_limit = 512M/" /etc/php/7.1/cli/php.ini
+sudo sed -i "s/;date.timezone.*/date.timezone = UTC/" /etc/php/7.1/cli/php.ini
 
 # Configure Sessions Directory Permissions
 
@@ -102,15 +199,15 @@ chmod 733 /var/lib/php/sessions
 chmod +t /var/lib/php/sessions
 
 
-#
+	#
 # REQUIRES:
-#       - server (the root server instance)
+#       - server (the forge server instance)
 #		- site_name (the name of the site folder)
 #
 
 # Install Nginx & PHP-FPM
 
-apt-get install -y --force-yes nginx php7.2-fpm
+    apt-get install -y --force-yes nginx php7.1-fpm
 
 # Generate dhparam File
 
@@ -118,24 +215,24 @@ openssl dhparam -out /etc/nginx/dhparams.pem 2048
 
 # Tweak Some PHP-FPM Settings
 
-sed -i "s/error_reporting = .*/error_reporting = E_ALL/" /etc/php/7.2/fpm/php.ini
-sed -i "s/display_errors = .*/display_errors = On/" /etc/php/7.2/fpm/php.ini
-sed -i "s/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/" /etc/php/7.2/fpm/php.ini
-sed -i "s/memory_limit = .*/memory_limit = 512M/" /etc/php/7.2/fpm/php.ini
-sed -i "s/;date.timezone.*/date.timezone = UTC/" /etc/php/7.2/fpm/php.ini
+sed -i "s/error_reporting = .*/error_reporting = E_ALL/" /etc/php/7.1/fpm/php.ini
+sed -i "s/display_errors = .*/display_errors = On/" /etc/php/7.1/fpm/php.ini
+sed -i "s/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/" /etc/php/7.1/fpm/php.ini
+sed -i "s/memory_limit = .*/memory_limit = 512M/" /etc/php/7.1/fpm/php.ini
+sed -i "s/;date.timezone.*/date.timezone = UTC/" /etc/php/7.1/fpm/php.ini
 
 # Configure FPM Pool Settings
 
-sed -i "s/^user = www-data/user = root/" /etc/php/7.2/fpm/pool.d/www.conf
-sed -i "s/^group = www-data/group = root/" /etc/php/7.2/fpm/pool.d/www.conf
-sed -i "s/;listen\.owner.*/listen.owner = root/" /etc/php/7.2/fpm/pool.d/www.conf
-sed -i "s/;listen\.group.*/listen.group = root/" /etc/php/7.2/fpm/pool.d/www.conf
-sed -i "s/;listen\.mode.*/listen.mode = 0666/" /etc/php/7.2/fpm/pool.d/www.conf
-sed -i "s/;request_terminate_timeout.*/request_terminate_timeout = 60/" /etc/php/7.2/fpm/pool.d/www.conf
+sed -i "s/^user = www-data/user = forge/" /etc/php/7.1/fpm/pool.d/www.conf
+sed -i "s/^group = www-data/group = forge/" /etc/php/7.1/fpm/pool.d/www.conf
+sed -i "s/;listen\.owner.*/listen.owner = forge/" /etc/php/7.1/fpm/pool.d/www.conf
+sed -i "s/;listen\.group.*/listen.group = forge/" /etc/php/7.1/fpm/pool.d/www.conf
+sed -i "s/;listen\.mode.*/listen.mode = 0666/" /etc/php/7.1/fpm/pool.d/www.conf
+sed -i "s/;request_terminate_timeout.*/request_terminate_timeout = 60/" /etc/php/7.1/fpm/pool.d/www.conf
 
 # Configure Primary Nginx Settings
 
-sed -i "s/user www-data;/user root;/" /etc/nginx/nginx.conf
+sed -i "s/user www-data;/user forge;/" /etc/nginx/nginx.conf
 sed -i "s/worker_processes.*/worker_processes auto;/" /etc/nginx/nginx.conf
 sed -i "s/# multi_accept.*/multi_accept on;/" /etc/nginx/nginx.conf
 sed -i "s/# server_names_hash_bucket_size.*/server_names_hash_bucket_size 64;/" /etc/nginx/nginx.conf
@@ -187,16 +284,20 @@ ln -s /etc/nginx/sites-available/catch-all /etc/nginx/sites-enabled/catch-all
 
 if [ ! -z "\$(ps aux | grep php-fpm | grep -v grep)" ]
 then
-    service php7.2-fpm restart > /dev/null 2>&1
+    service php7.1-fpm restart > /dev/null 2>&1
+    service php7.0-fpm restart > /dev/null 2>&1
+    service php5.6-fpm restart > /dev/null 2>&1
+    service php5-fpm restart > /dev/null 2>&1
+fi
 
 service nginx restart
 service nginx reload
 
 # Add Forge User To www-data Group
 
-usermod -a -G www-data root
-id root
-groups root
+usermod -a -G www-data forge
+id forge
+groups forge
 
 
 curl --silent --location https://deb.nodesource.com/setup_6.x | bash -
@@ -211,7 +312,7 @@ npm install -g yarn
 
     #
 # REQUIRES:
-#       - server (the root server instance)
+#       - server (the forge server instance)
 #       - db_password (random password for mysql user)
 #
 
@@ -238,9 +339,9 @@ mysql --user="root" --password="ABC123456789" -e "GRANT ALL ON *.* TO root@'12.3
 mysql --user="root" --password="ABC123456789" -e "GRANT ALL ON *.* TO root@'%' IDENTIFIED BY 'ABC123456789';"
 service mysql restart
 
-mysql --user="root" --password="ABC123456789" -e "CREATE USER 'root'@'12.34.56.78' IDENTIFIED BY 'ABC123456789';"
-mysql --user="root" --password="ABC123456789" -e "GRANT ALL ON *.* TO 'root'@'12.34.56.78' IDENTIFIED BY 'ABC123456789' WITH GRANT OPTION;"
-mysql --user="root" --password="ABC123456789" -e "GRANT ALL ON *.* TO 'root'@'%' IDENTIFIED BY 'ABC123456789' WITH GRANT OPTION;"
+mysql --user="root" --password="ABC123456789" -e "CREATE USER 'forge'@'12.34.56.78' IDENTIFIED BY 'ABC123456789';"
+mysql --user="root" --password="ABC123456789" -e "GRANT ALL ON *.* TO 'forge'@'12.34.56.78' IDENTIFIED BY 'ABC123456789' WITH GRANT OPTION;"
+mysql --user="root" --password="ABC123456789" -e "GRANT ALL ON *.* TO 'forge'@'%' IDENTIFIED BY 'ABC123456789' WITH GRANT OPTION;"
 mysql --user="root" --password="ABC123456789" -e "FLUSH PRIVILEGES;"
 
 # Set Character Set
@@ -251,12 +352,12 @@ echo "character-set-server = utf8" >> /etc/mysql/my.cnf
 
 # Create The Initial Database If Specified
 
-mysql --user="root" --password="ABC123456789" -e "CREATE DATABASE root;"
+mysql --user="root" --password="ABC123456789" -e "CREATE DATABASE forge;"
 
 
 #
 # REQUIRES:
-#		- server (the root server instance)
+#		- server (the forge server instance)
 #		- db_password (random password for database user)
 #
 
@@ -268,7 +369,7 @@ apt-get install -y --force-yes postgresql
 
 sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /etc/postgresql/9.5/main/postgresql.conf
 echo "host    all             all             0.0.0.0/0               md5" | tee -a /etc/postgresql/9.5/main/pg_hba.conf
-sudo -u postgres psql -c "CREATE ROLE root LOGIN UNENCRYPTED PASSWORD 'ABC123456789' SUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;"
+sudo -u postgres psql -c "CREATE ROLE forge LOGIN UNENCRYPTED PASSWORD 'ABC123456789' SUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;"
 service postgresql restart
 
 # Configure The Timezone
@@ -278,7 +379,7 @@ service postgresql restart
 
 # Create The Initial Database If Specified
 
-sudo -u postgres /usr/bin/createdb --echo --owner=root root
+sudo -u postgres /usr/bin/createdb --echo --owner=forge forge
 
 
 # Install & Configure Redis Server
@@ -334,5 +435,5 @@ APT::Periodic::Download-Upgradeable-Packages "1";
 APT::Periodic::AutocleanInterval "7";
 APT::Periodic::Unattended-Upgrade "1";
 EOF
-echo "Setup Finished";
-#curl --insecure --data "event_id=321&server_id=123&sudo_password=abcpass&db_password=ABC123456789" https://root.laravel.com/provisioning/callback/app-------------------------------------------------------#
+
+curl --insecure --data "event_id=321&server_id=123&sudo_password=abcpass&db_password=ABC123456789" https://forge.laravel.com/provisioning/callback/app-------------------------------------------------------#
