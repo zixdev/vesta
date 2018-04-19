@@ -5,10 +5,7 @@
 #
 # Currently Supported Operating Systems:
 #
-#   RHEL 5, 6, 7
-#   CentOS 5, 6, 7
-#   Debian 7, 8
-#   Ubuntu 12.04 - 16.10
+#   Ubuntu 16.04
 #
 
 # Am I root?
@@ -37,38 +34,36 @@ if [ ! -z "$(grep ^admin: /etc/group)" ] && [ -z "$1" ]; then
     exit 1
 fi
 
-# Detect OS
-case $(head -n1 /etc/issue | cut -f 1 -d ' ') in
-    Debian)     type="debian" ;;
-    Ubuntu)     type="ubuntu" ;;
-    *)          type="rhel" ;;
-esac
+## Detect OS
+#case $(head -n1 /etc/issue | cut -f 1 -d ' ') in
+#    Debian)     type="debian" ;;
+#    Ubuntu)     type="ubuntu" ;;
+#    *)          type="rhel" ;;
+#esac
 
 # Fallback to Ubuntu
-if [ ! -e "/etc/redhat-release" ]; then
-    type='ubuntu'
-fi
+type='ubuntu'
 
 # Check wget
 if [ -e '/usr/bin/wget' ]; then
-    wget https://raw.githubusercontent.com/zixdev/vesta/master/install/vst-install-$type.sh -O vst-install-$type.sh
+    wget https://raw.githubusercontent.com/zixdev/vesta/master/install/install-$type.sh -O install-$type.sh
     if [ "$?" -eq '0' ]; then
         bash vst-install-$type.sh $*
         exit
     else
-        echo "Error: vst-install-$type.sh download failed."
+        echo "Error: install-$type.sh download failed."
         exit 1
     fi
 fi
 
 # Check curl
 if [ -e '/usr/bin/curl' ]; then
-    curl -O https://raw.githubusercontent.com/zixdev/vesta/master/install/vst-install-$type.sh
+    curl -O https://raw.githubusercontent.com/zixdev/vesta/master/install/install-$type.sh
     if [ "$?" -eq '0' ]; then
         bash vst-install-$type.sh $*
         exit
     else
-        echo "Error: vst-install-$type.sh download failed."
+        echo "Error: install-$type.sh download failed."
         exit 1
     fi
 fi
