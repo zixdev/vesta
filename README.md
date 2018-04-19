@@ -18,11 +18,11 @@ ssh root@your.server
 
 Download the installation script:
 ```bash
-curl -O https://raw.githubusercontent.com/zixdev/vesta/master/install/vst-install.sh
+curl -O https://raw.githubusercontent.com/zixdev/vesta/master/install/install.sh
 ```
 Then run it:
 ```bash
-bash vst-install.sh --force
+bash install.sh --force
 ```
 
 License

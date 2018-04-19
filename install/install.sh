@@ -48,7 +48,7 @@ type='ubuntu'
 if [ -e '/usr/bin/wget' ]; then
     wget https://raw.githubusercontent.com/zixdev/vesta/master/install/install-$type.sh -O install-$type.sh
     if [ "$?" -eq '0' ]; then
-        bash vst-install-$type.sh $*
+        bash install-$type.sh $*
         exit
     else
         echo "Error: install-$type.sh download failed."
@@ -60,7 +60,7 @@ fi
 if [ -e '/usr/bin/curl' ]; then
     curl -O https://raw.githubusercontent.com/zixdev/vesta/master/install/install-$type.sh
     if [ "$?" -eq '0' ]; then
-        bash vst-install-$type.sh $*
+        bash install-$type.sh $*
         exit
     else
         echo "Error: install-$type.sh download failed."
