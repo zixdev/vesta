@@ -14,7 +14,7 @@ VESTA='/usr/local/vesta'
 memory=$(grep 'MemTotal' /proc/meminfo |tr ' ' '\n' |grep [0-9])
 arch=$(uname -i)
 os='ubuntu'
-release="$(lsb_release -s -r)"
+release="16.04"
 codename="$(lsb_release -s -c)"
 vestacp="https://raw.githubusercontent.com/zixdev/vesta/master/install/ubuntu/16.04"
 
