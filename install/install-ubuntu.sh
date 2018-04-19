@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Vesta Ubuntu installer v.05
+# Ubuntu installer v.01
 
 #----------------------------------------------------------#
 #                  Variables&Functions                     #
@@ -17,7 +17,6 @@ os='ubuntu'
 release="$(lsb_release -s -r)"
 codename="$(lsb_release -s -c)"
 vestacp="https://raw.githubusercontent.com/zixdev/vesta/master/install/ubuntu/16.04"
-#vestacp="http://$CHOST/$VERSION/$release"
 
 software="nginx apache2 apache2-utils apache2.2-common
         apache2-suexec-custom libapache2-mod-ruid2 libapache2-mod-rpaf
@@ -474,10 +473,8 @@ cp -r /etc/apache2/* $vst_backups/apache2 > /dev/null 2>&1
 rm -f /etc/apache2/conf.d/* > /dev/null 2>&1
 
 # Backing up PHP configuration
-service php7.0-fpm stop > /dev/null 2>&1
-service php5-fpm stop > /dev/null 2>&1
-cp -r /etc/php7.0/* $vst_backups/php/ > /dev/null 2>&1
-cp -r /etc/php5/* $vst_backups/php/ > /dev/null 2>&1
+service php7.2-fpm stop > /dev/null 2>&1
+cp -r /etc/php7.2/* $vst_backups/php/ > /dev/null 2>&1
 cp -r /etc/php/* $vst_backups/php/ > /dev/null 2>&1
 
 # Backing up Bind configuration
@@ -550,13 +547,11 @@ if [ "$apache" = 'no' ]; then
     software=$(echo "$software" | sed -e "s/libapache2-mod-ruid2//")
     software=$(echo "$software" | sed -e "s/libapache2-mod-rpaf//")
     software=$(echo "$software" | sed -e "s/libapache2-mod-fcgid//")
-    software=$(echo "$software" | sed -e "s/libapache2-mod-php7.0//")
-    software=$(echo "$software" | sed -e "s/libapache2-mod-php5//")
+    software=$(echo "$software" | sed -e "s/libapache2-mod-php7.2//")
     software=$(echo "$software" | sed -e "s/libapache2-mod-php//")
 fi
 if [ "$phpfpm" = 'no' ]; then
-    software=$(echo "$software" | sed -e "s/php7.0-fpm//")
-    software=$(echo "$software" | sed -e "s/php5-fpm//")
+    software=$(echo "$software" | sed -e "s/php7.2-fpm//")
     software=$(echo "$software" | sed -e "s/php-fpm//")
 fi
 if [ "$vsftpd" = 'no' ]; then
@@ -591,8 +586,7 @@ if [ "$mysql" = 'no' ]; then
     software=$(echo "$software" | sed -e 's/mysql-server//')
     software=$(echo "$software" | sed -e 's/mysql-client//')
     software=$(echo "$software" | sed -e 's/mysql-common//')
-    software=$(echo "$software" | sed -e 's/php7.0-mysql//')
-    software=$(echo "$software" | sed -e 's/php5-mysql//')
+    software=$(echo "$software" | sed -e 's/php7.2-mysql//')
     software=$(echo "$software" | sed -e 's/php-mysql//')
     software=$(echo "$software" | sed -e 's/phpMyAdmin//')
     software=$(echo "$software" | sed -e 's/phpmyadmin//')
@@ -600,8 +594,7 @@ fi
 if [ "$postgresql" = 'no' ]; then
     software=$(echo "$software" | sed -e 's/postgresql-contrib//')
     software=$(echo "$software" | sed -e 's/postgresql//')
-    software=$(echo "$software" | sed -e 's/php7.0-pgsql//')
-    software=$(echo "$software" | sed -e 's/php5-pgsql//')
+    software=$(echo "$software" | sed -e 's/php7.2-pgsql//')
     software=$(echo "$software" | sed -e 's/php-pgsql//')
     software=$(echo "$software" | sed -e 's/phppgadmin//')
 fi
@@ -1140,7 +1133,6 @@ if [ "$exim" = 'yes' ] && [ "$mysql" = 'yes' ]; then
     fi
 
     mysql roundcube < /usr/share/dbconfig-common/data/roundcube/install/mysql
-    php5enmod mcrypt 2>/dev/null
     phpenmod mcrypt 2>/dev/null
     service apache2 restart
 fi
