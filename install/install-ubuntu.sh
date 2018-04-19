@@ -334,5 +334,5 @@ APT::Periodic::Download-Upgradeable-Packages "1";
 APT::Periodic::AutocleanInterval "7";
 APT::Periodic::Unattended-Upgrade "1";
 EOF
-echo "Setup Finished";
-#curl --insecure --data "event_id=321&server_id=123&sudo_password=abcpass&db_password=ABC123456789" https://root.laravel.com/provisioning/callback/app-------------------------------------------------------#
+echo "Setup Finished"
+fi
